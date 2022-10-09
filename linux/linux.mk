@@ -185,14 +185,17 @@ endif
 LINUX_VERSION_PROBED = `MAKEFLAGS='$(filter-out w,$(MAKEFLAGS))' $(MAKE) $(LINUX_MAKE_FLAGS) -C $(LINUX_DIR) --no-print-directory -s kernelrelease 2>/dev/null`
 
 LINUX_DTS_NAME += $(call qstrip,$(BR2_LINUX_KERNEL_INTREE_DTS_NAME))
+LINUX_DTS_OVERLAYS_NAME += $(call qstrip,$(BR2_LINUX_KERNEL_INTREE_DTS_OVERLAYS_NAME))
 
 # We keep only the .dts files, so that the user can specify both .dts
 # and .dtsi files in BR2_LINUX_KERNEL_CUSTOM_DTS_PATH. Both will be
 # copied to arch/<arch>/boot/dts, but only the .dts files will
 # actually be generated as .dtb.
 LINUX_DTS_NAME += $(basename $(filter %.dts,$(notdir $(call qstrip,$(BR2_LINUX_KERNEL_CUSTOM_DTS_PATH)))))
+LINUX_DTS_OVERLAYS_NAME += $(basename $(filter %.dts,$(notdir $(call qstrip,$(BR2_LINUX_KERNEL_CUSTOM_DTS_PATH)))))
 
 LINUX_DTBS = $(addsuffix .dtb,$(LINUX_DTS_NAME))
+LINUX_DTBS_OVERLAYS = $(addsuffix .dtbo,$(LINUX_DTS_OVERLAYS_NAME))
 
 ifeq ($(BR2_LINUX_KERNEL_IMAGE_TARGET_CUSTOM),y)
 LINUX_IMAGE_NAME = $(call qstrip,$(BR2_LINUX_KERNEL_IMAGE_NAME))
@@ -421,6 +424,9 @@ ifeq ($(BR2_LINUX_KERNEL_DTB_IS_SELF_BUILT),)
 define LINUX_BUILD_DTB
 	$(LINUX_MAKE_ENV) $(MAKE) $(LINUX_MAKE_FLAGS) -C $(@D) $(LINUX_DTBS)
 endef
+define LINUX_BUILD_DTB_OVERLAYS
+	$(LINUX_MAKE_ENV) $(MAKE) $(LINUX_MAKE_FLAGS) -C $(@D) dtbs
+endef
 ifeq ($(BR2_LINUX_KERNEL_APPENDED_DTB),)
 define LINUX_INSTALL_DTB
 	# dtbs moved from arch/<ARCH>/boot to arch/<ARCH>/boot/dts since 3.8-rc1
@@ -428,6 +434,14 @@ define LINUX_INSTALL_DTB
 		install -D \
 			$(or $(wildcard $(LINUX_ARCH_PATH)/boot/dts/$(dtb)),$(LINUX_ARCH_PATH)/boot/$(dtb)) \
 			$(1)/$(if $(BR2_LINUX_KERNEL_DTB_KEEP_DIRNAME),$(dtb),$(notdir $(dtb)))
+	)
+endef
+define LINUX_INSTALL_DTB_OVERLAYS
+	# dtbs moved from arch/<ARCH>/boot to arch/<ARCH>/boot/dts since 3.8-rc1
+	$(foreach dtbo,$(LINUX_DTBS_OVERLAYS), \
+		install -D \
+			$(or $(wildcard $(LINUX_ARCH_PATH)/boot/dts/overlays/$(dtbo)),$(LINUX_ARCH_PATH)/boot/$(dtbo)) \
+			$(1)/$(if $(BR2_LINUX_KERNEL_DTB_KEEP_DIRNAME),$(dtbo),$(notdir $(dtbo)))
 	)
 endef
 endif # BR2_LINUX_KERNEL_APPENDED_DTB
@@ -477,8 +491,10 @@ define LINUX_BUILD_CMDS
 		cp -f $(dts) $(LINUX_ARCH_PATH)/boot/dts/
 	)
 	$(LINUX_MAKE_ENV) $(MAKE) $(LINUX_MAKE_FLAGS) -C $(@D) all
+	$(LINUX_MAKE_ENV) $(MAKE) $(LINUX_MAKE_FLAGS) -C $(@D) modules
 	$(LINUX_MAKE_ENV) $(MAKE) $(LINUX_MAKE_FLAGS) -C $(@D) $(LINUX_TARGET_NAME)
 	$(LINUX_BUILD_DTB)
+	$(LINUX_BUILD_DTB_OVERLAYS)
 	$(LINUX_APPEND_DTB)
 endef
 
@@ -501,6 +517,7 @@ ifeq ($(BR2_LINUX_KERNEL_INSTALL_TARGET),y)
 define LINUX_INSTALL_KERNEL_IMAGE_TO_TARGET
 	$(call LINUX_INSTALL_IMAGE,$(TARGET_DIR)/boot)
 	$(call LINUX_INSTALL_DTB,$(TARGET_DIR)/boot)
+	$(call LINUX_INSTALL_DTB_OVERLAYS,$(TARGET_DIR)/boot/overlays)
 endef
 endif
 
@@ -515,6 +532,7 @@ endef
 define LINUX_INSTALL_IMAGES_CMDS
 	$(call LINUX_INSTALL_IMAGE,$(BINARIES_DIR))
 	$(call LINUX_INSTALL_DTB,$(BINARIES_DIR))
+	$(call LINUX_INSTALL_DTB_OVERLAYS,$(BINARIES_DIR)/overlays)
 endef
 
 ifeq ($(BR2_STRIP_strip),y)

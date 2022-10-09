@@ -411,6 +411,13 @@ config BR2_LINUX_KERNEL_INTREE_DTS_NAME
 	  the trailing .dts. You can provide a list of
 	  dts files to build, separated by spaces.
 
+config BR2_LINUX_KERNEL_INTREE_DTS_OVERLAYS_NAME
+	string "In-tree Device Tree Source overlays file names"
+	help
+	  Name of in-tree device tree source file, without
+	  the trailing .dts. You can provide a list of
+	  dts files to build, separated by spaces.
+
 config BR2_LINUX_KERNEL_CUSTOM_DTS_PATH
 	string "Out-of-tree Device Tree Source file paths"
 	help

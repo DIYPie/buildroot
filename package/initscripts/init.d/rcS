@@ -25,3 +25,13 @@ for i in /etc/init.d/S??* ;do
     esac
 done
 
+if [ ! -d "/boot" ]; then
+	mkdir /boot
+fi
+
+if [ ! -d "/boot" ]; then
+	mkdir /boot
+fi
+
+mount /dev/mmcblk0p1 /boot
+modetest -M vc4 -s 32@71:1440x1600 -v
